@@ -7,3 +7,7 @@ clear
 clc
 
 globals;
+t = 0:dTmod:Tmod;
+Nmod = length(t);
+
+GPS_Const = CreateGPS();
