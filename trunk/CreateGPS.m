@@ -22,7 +22,7 @@ orb_old = deg2rad(AlmGPS(15, 7));
 for j = 1:size(AlmGPS, 1)
     
     e = AlmGPS(j, 3);
-    a = AlmGPS(j, 6);
+    a = AlmGPS(j, 6) * 1e3;
     incl = deg2rad(AlmGPS(j, 4));
     omega =  deg2rad(AlmGPS(j, 8));
     Omega = deg2rad(AlmGPS(j, 7));
