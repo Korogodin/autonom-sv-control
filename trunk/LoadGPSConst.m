@@ -49,7 +49,7 @@ for (j = 1:N_GPS)
     end
 end
 
-fprintf('Constellation of %.0f GPS SVs are loaded\n', k);
+fprintf('Constellation of %.0f GPS SVs was loaded\n', k);
 
 end
 
@@ -130,7 +130,7 @@ Alm.dOmega = ns2(11)*pi; % [rad/s]
 % 1 - Om0 - долгота узла, полуциклы (Omega: longtitude of ascending node, half-of-cicle) 
 % 2 - I - наклонение, полуциклы (i: Inclination, half-of-cicle)
 % 3 - w - аргумент перигея, полуциклы (omega: argument of perigee, half-of-cicle)
-% 4 - E - эксцентриситет (Eccenticity)
+% 4 - E - эксцентриситет (Eccentricity)
 % 5 - SQRT(A) - корень из большой полуоси, м^0.5 (root of semi-major axis)
 % 6 - M0 - средняя аномалия, полуциклы (mean anomaly, half-of-cicle)
 ns3 = str2num(s3);
