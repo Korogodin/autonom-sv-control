@@ -9,151 +9,216 @@ clc
 globals;
 addpath([pwd '/data/']);
 
+load RadPatt.mat % Radiation patterns for transmitter's and receiver's antennas
+
 mu_earth = 3.9860044e14; % [m^3/s^2] Gravity constant
 omega_e = 0.7292115e-4; % [rad/s] Earth's rotation rate
 R_e = 6371e3;  % [m] Mean Earth radiius
         
-Tmod = 15*60*60;
-dTmod = 300;
+Tmod = 5*89/60*4*60*60; % Model time
+dTmod = 30; % time step
 t = CTime(0:dTmod:Tmod, 24, 09, 2012);
 Nmod = length(t.t);
 
-% global Omega1 Omega2 Omega3 cOmega1 cOmega2 cOmega3
-% Omega1 = 0; Omega2 = 0; Omega3 = 0;
+% Sensivity for NV08C
+SensLoopGPS = -185; % dBWt
+SensSearchGPS = -167;
+SensLoopGLO = -182;
+SensSearchGLO = -168;
+
+% Load GLONASS constellation from almanac
 GLO_Const = LoadGLOConst([pwd '/data/Topcon_120925.agl'], t);
-figure(1)
+N_GLO = length(GLO_Const);
+hF = 0;
+hF = figure(hF + 1); hF_sat = hF;
+pos = get(hF, 'Position'); 
+pos(3:4) = pos(3:4)*2;
+set(hF, 'Position', pos);
 hold on
-for j = 1:length(GLO_Const)
-    plot3(GLO_Const(j).x, GLO_Const(j).y, GLO_Const(j).z, 'm')
-    plot3(GLO_Const(j).x(1), GLO_Const(j).y(1), GLO_Const(j).z(1), '*g', 'MarkerSize', 10)
+lambda =  3e8 / 1.602e9;
+TransPower = 18;
+for j = 1:N_GLO
+    GLO_Const(j).RL_L1 = CRadioLine(lambda, Gr_L1, Gt_GLOL1, TransPower, SensLoopGLO, SensSearchGLO);
+    plot3(GLO_Const(j).x, GLO_Const(j).y, GLO_Const(j).z, 'b'); % m
+    plot3(GLO_Const(j).x(end), GLO_Const(j).y(end), GLO_Const(j).z(end), '*b', 'MarkerSize', 12)
 %     fprintf('%f\n', GLO_Const(j).Alm.Omega);
 end
 hold off
 
 
+% Load GPS constellation from almanac
 GPS_Const = LoadGPSConst([pwd '/data/Topcon_120925.agp'], t);
-figure(1)
+N_GPS = length(GPS_Const);
+figure(hF_sat)
 hold on
-for j = 1:length(GPS_Const)
-    plot3(GPS_Const(j).x, GPS_Const(j).y, GPS_Const(j).z, 'y')
-    plot3(GPS_Const(j).x(1), GPS_Const(j).y(1), GPS_Const(j).z(1), '*b', 'MarkerSize', 10)
+lambda =  3e8 / 1.575e9;
+TransPower = 17.5;
+for j = 1:N_GPS
+    GPS_Const(j).RL_L1 = CRadioLine(lambda, Gr_L1, Gt_GPSL1, TransPower, SensLoopGPS, SensSearchGPS);
+    plot3(GPS_Const(j).x, GPS_Const(j).y, GPS_Const(j).z, 'g'); % y
+    plot3(GPS_Const(j).x(end), GPS_Const(j).y(end), GPS_Const(j).z(end), '*g', 'MarkerSize', 12)
 %     fprintf('%f\n', GPS_Const(j).Alm.Omega);
 end
+xlabel('X_0'); ylabel('Y_0'); zlabel('Z_0');
 hold off
 
-N_GPS = length(GPS_Const);
-N_GLO = length(GLO_Const);
 
-aa = 0;
-h_min = 0e3;
-h_max = 5.0e6;
-dh = 100e3;
-Na = length((R_e+h_min):dh:(R_e + h_max));
+% Earth sphere
+R_earth_pol = 6356777; % Polar radius of Earth
+R_earth_equa = 6378160; % Equatorial radius of Earth
+Earth_axe_angl = deg2rad(23); 
+[x_e,y_e,z_e] = sphere(50);
+x_e = R_earth_equa * x_e; y_e = R_earth_equa * y_e; z_e = R_earth_pol * z_e;
+hF = 0;
+hF = figure(hF + 1);
+hold on; surface(x_e, y_e, z_e); hold off;
 
-min_S = nan(1, Na);
-max_S = nan(1, Na);
-proc_S = nan(1, Na);
+Type = 'LEO';
+CNS = LoadCNS( Type, t );
 
-min_S_GLO = nan(1, Na);
-max_S_GLO = nan(1, Na);
-proc_S_GLO = nan(1, Na);
+Hvect = R_e:25e3:R_e+8000e3;
 
-min_S_GPS = nan(1, Na);
-max_S_GPS = nan(1, Na);
-proc_S_GPS = nan(1, Na);
-
-h_S = nan(1, Na);
-
-for a = (R_e+h_min):dh:(R_e + h_max)
-    aa = aa+1;
-
-    fprintf('Calculation for LEO satt, h = %f\n', a-R_e);
-    % Космос-2480 — российский разведывательный спутник типа Кобальт-М.
-    % http://ru.wikipedia.org/wiki/Космос-2480
-    % R_e + 259.5e3 = (1 + e)*a;
-    % R_e + 196.4e3 = (1 - e)*a; => a = 6598950; e = 0.0048;
-    e = 0.0048;
-    % a = 6598950; 
-    % a = a+750e3;
-    Omega = deg2rad(10);
-    omega = 0; M0 = 0; 
-    i = deg2rad(81.4);
-    LEO_SV =  SpaceVehicle_LEO('LEO', a, e, Omega, omega, i, M0, t);
-    LEO_SV.calcKeplerOrbit(t);
-    fprintf('OK\n');
-    figure(1)
-    hold on
-    plot3(LEO_SV.x, LEO_SV.y, LEO_SV.z, 'r')
-    plot3(LEO_SV.x(1), LEO_SV.y(1), LEO_SV.z(1), '*r', 'MarkerSize', 10)
-    hold off
-
-    Sucs_Counter_GLO = zeros(1, Nmod);
-    Sucs_Counter_GPS = zeros(1, Nmod);
-    for k = 1:Nmod
-
-        LEO_SV.X = [LEO_SV.x(k); LEO_SV.y(k); LEO_SV.z(k)];
-        LEO_SV.AntM = LEO_SV.X/LEO_SV.r(k);
-        
-        for j = 1:N_GPS
-            GPS_Const(j).X = [GPS_Const(j).x(k); GPS_Const(j).y(k); GPS_Const(j).z(k)];
-            GPS_Const(j).AntM = -GPS_Const(j).X /GPS_Const(j).r(k);
-            SVSV = (GPS_Const(j).X - LEO_SV.X); SVSV = SVSV / norm(SVSV);
-            AntAngleLEO = rad2deg(acos(LEO_SV.AntM' * SVSV));
-            AntAngleGPS = rad2deg(acos(GPS_Const(j).AntM' * (-SVSV)));
-            if (abs(AntAngleLEO) <= 85) && (abs(AntAngleGPS) <= 25)
-                Sucs_Counter_GPS(k) = Sucs_Counter_GPS(k) + 1;
-            end
-        end
-        
-        for j = 1:N_GLO
-            GLO_Const(j).X = [GLO_Const(j).x(k); GLO_Const(j).y(k); GLO_Const(j).z(k)];
-            GLO_Const(j).AntM = -GLO_Const(j).X /GLO_Const(j).r(k);
-            SVSV = (GLO_Const(j).X - LEO_SV.X); SVSV = SVSV / norm(SVSV);
-            AntAngleLEO = rad2deg(acos(LEO_SV.AntM' * SVSV));
-            AntAngleGLO= rad2deg(acos(GLO_Const(j).AntM' * (-SVSV)));
-            if (abs(AntAngleLEO) <= 85) && (abs(AntAngleGLO) <= 25)
-                Sucs_Counter_GLO(k) = Sucs_Counter_GLO(k) + 1;
-            end        
-        end
-    end
-
-    Sucs_Counter = Sucs_Counter_GLO + Sucs_Counter_GPS;
-
-    figure(2)
-    plot(t.t, Sucs_Counter, t.t, Sucs_Counter_GPS, t.t, Sucs_Counter_GLO)
-    xlabel('t, sec');
-    legend('Sum', 'GPS', 'GLO');
+if length(Hvect) > 1
+    a = R_e + Hvect;
+    Na = length(a);
+    Availability_GLO = nan(1, length(Hvect));
+    Availability_GPS = nan(1, length(Hvect));
+    Availability_Comm = nan(1, length(Hvect));
     
-    min_S(aa) = min(Sucs_Counter);
-    max_S(aa) = max(Sucs_Counter);
-    proc_S(aa) = sum(Sucs_Counter>=4) / Nmod * 100;
-
-    min_S_GLO(aa) = min(Sucs_Counter_GLO);
-    max_S_GLO(aa) = max(Sucs_Counter_GLO);
-    proc_S_GLO(aa) = sum(Sucs_Counter_GLO>=4) / Nmod * 100;
-
-    min_S_GPS(aa) = min(Sucs_Counter_GPS);
-    max_S_GPS(aa) = max(Sucs_Counter_GPS);
-    proc_S_GPS(aa) = sum(Sucs_Counter_GPS>=4) / Nmod * 100;
-
-    h_S(aa) = a - R_e;
-    clear LEO_SV;
+    GoodDOP_GLO = nan(1, length(Hvect));
+    GoodDOP_GPS = nan(1, length(Hvect));
+    GoodDOP_Comm = nan(1, length(Hvect));
+    
+    MaxPower_GLO = nan(1, length(Hvect));
+    MaxPower_GPS = nan(1, length(Hvect));
+else 
+    Na = 1;
 end
 
-figure(3)
-plot(h_S/1000, min_S, h_S/1000, min_S_GPS, h_S/1000, min_S_GLO)
-xlabel('H, km')
-ylabel('Min number of visible SVs');
-legend('Sum', 'GPS', 'GLO');
+hF = hF + 1; hF_P_GPS = hF;
+hF = hF + 1; hF_P_GLO = hF;
+hF = hF + 1; hF_DOP = hF;
+hF = hF + 1; hF_Num = hF;
+hF = hF + 1; hF_MinIn4 = hF;
+for ja = 1:Na
+    
+    fprintf('Calculate for h = %.0f km...\n', (Hvect(ja)-R_e)/1e3);
+    if Na > 1
+        CNS.a = Hvect(ja);
+        CNS.calcKeplerOrbit(t);
+    end
+%         CNS.a =R_earth_equa;
+%         CNS.calcKeplerOrbit(t);    
+    
+    figure(hF_sat)
+    hold on
+    plot3(CNS.x, CNS.y, CNS.z, 'r', 'LineWidth', 2)
+    plot3(CNS.x(end), CNS.y(end), CNS.z(end), '*r', 'MarkerSize', 12)
+    hold off
+    
+    % Radioline GLO-CNS
+    fprintf('Calculate radioline for GLO...\n');
+    for js = 1:N_GLO
+        GLO_Const(js).RL_L1.CalcRL(t, GLO_Const(js), CNS);
+    end
+        figure(hF_P_GLO);
+        cla
+        spr = 'plot(t.t, GLO_Const(1).RL_L1.Power';
+        spr_leg = ['legend(''GLONASS ' GLO_Const(1).Name ''''];
+        for j = 2:N_GLO
+            spr = [spr sprintf(', t.t, GLO_Const(%.0f).RL_L1.Power', j)];
+            spr_leg = [spr_leg ', ''GLONASS ' GLO_Const(1).Name ''''];
+        end
+        spr = [spr ');'];
+        spr_leg = [spr_leg ');'];
+        eval(spr);
+        eval(spr_leg);
+        xlabel('t, s');
+        ylabel('P_{ant}, dBWt')
+        title('GLO')        
 
-figure(4)
-plot(h_S/1000, max_S, h_S/1000, max_S_GPS, h_S/1000, max_S_GLO)
-xlabel('H, km')
-ylabel('Max number of visible SVs');
-legend('Sum', 'GPS', 'GLO');
+    
+    
+    % Radioline GPS-CNS
+    fprintf('Calculate radioline for GPS...\n');
+    for js = 1:N_GPS
+        GPS_Const(js).RL_L1.CalcRL(t, GPS_Const(js), CNS);
+    end
+        figure(hF_P_GPS);
+        cla
+        spr = 'plot(t.t, GPS_Const(1).RL_L1.Power';    
+        spr_leg = ['legend(''GPS ' GLO_Const(1).Name ''''];
+        for j = 2:N_GPS
+            spr = [spr sprintf(', t.t, GPS_Const(%.0f).RL_L1.Power', j)];
+            spr_leg = [spr_leg ', ''GPS ' GPS_Const(1).Name ''''];
+        end
+        spr = [spr ');'];
+        spr_leg = [spr_leg ');'];
+        eval(spr);
+        eval(spr_leg);
+        xlabel('t, s');
+        ylabel('P_{ant}, dBWt')
+        title('GPS')    
+    
+    fprintf('Calculate DOP...\n');
+    CNS.calcDOP(t, GLO_Const, GPS_Const);
+        figure(hF_DOP)
+        cla
+        plot(t.t, CNS.DOP_GLO, t.t, CNS.DOP_GPS, t.t, CNS.DOP_Comm);
+        xlabel('t, sec')
+        ylabel('GDOP');
+        legend('GLONASS', 'GPS', 'GLONASS+GPS');
+    
 
-figure(5)
-plot(h_S/1000, proc_S, h_S/1000, proc_S_GPS, h_S/1000, proc_S_GLO)
-xlabel('H, km')
-ylabel('The percentage of time during which it is possible positioning (N>=4)');
-legend('Sum', 'GPS', 'GLO');
+    fprintf('Calculate number of satellites...\n');
+    CNS.calcSatNums(t, GLO_Const, GPS_Const);
+        figure(hF_Num)
+        cla
+        plot(t.t, CNS.Num_Sync_GLO, t.t, CNS.Num_Sync_GPS, t.t, CNS.Num_Sync_GLO+CNS.Num_Sync_GPS);
+        xlabel('t, sec')
+        ylabel('N');
+        legend('GLONASS', 'GPS', 'GLONASS+GPS');
+    
+        figure(hF_MinIn4)
+        cla
+        plot(t.t, CNS.MinIn4_GLO, t.t, CNS.MinIn4_GPS);
+        xlabel('t, sec')
+        ylabel('Minimum P_{ant} in working four, dBWt');
+        legend('GLONASS', 'GPS');
+        
+        Availability_GLO(ja) = sum(CNS.Num_Sync_GLO >= 4) / Nmod;
+        Availability_GPS(ja) = sum(CNS.Num_Sync_GPS >= 4) / Nmod;
+        Availability_Comm(ja) = sum( (CNS.Num_Sync_GPS >= 3)&(CNS.Num_Sync_GLO >= 2) |...
+                                                   (CNS.Num_Sync_GPS >= 2)&(CNS.Num_Sync_GLO >= 3) | ...
+                                                   (CNS.Num_Sync_GPS >= 4) | ...
+                                                   (CNS.Num_Sync_GLO >= 4)) / Nmod;
+       
+        MaxPower_GLO(ja) = max(CNS.MinIn4_GLO);
+        MaxPower_GPS(ja) = max(CNS.MinIn4_GPS);
+    
+        GoodDOP_GLO(ja) = sum(CNS.DOP_GLO <= 20) / Nmod;
+        GoodDOP_GPS(ja) = sum(CNS.DOP_GPS <= 20) / Nmod;
+        GoodDOP_Comm(ja) = sum(CNS.DOP_Comm <= 20) / Nmod;
+end
+
+
+if Na > 1
+    Hvect = Hvect - R_e;
+    hF = figure(hF + 1);
+    plot(Hvect, Availability_GLO*100, Hvect, Availability_GPS*100, Hvect, Availability_Comm*100)
+    xlabel('H, m');
+    ylabel('Measurament availability percent');
+    legend('GLONASS', 'GPS', 'GLONASS+GPS');
+    
+    hF = figure(hF + 1);
+    plot(Hvect, MaxPower_GLO, Hvect, MaxPower_GPS)
+    xlabel('H, m');
+    ylabel('Max Signal Power for 4 satellites');
+    legend('GLONASS', 'GPS');    
+    
+    hF = figure(hF + 1);
+    plot(Hvect, GoodDOP_GLO*100, Hvect, GoodDOP_GPS*100, Hvect, GoodDOP_Comm*100)
+    xlabel('H, m');
+    ylabel('GDOP<=20 PerCent');
+    legend('GLONASS', 'GPS', 'GLONASS+GPS');       
+end

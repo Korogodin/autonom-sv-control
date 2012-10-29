@@ -4,36 +4,41 @@ classdef SpaceVehicle < handle
     properties
         
         % Cartesian, equatorial
-        X
-        V
-        x
-        y
-        z
-        Vx
-        Vy
-        Vz
+        X % 3x1
+        V % 3x1
+        x % 1:K
+        y % 1:K
+        z % 1:K
+        Vx % 1:K
+        Vy % 1:K
+        Vz % 1:K
       
-        r 
+        r % 1:K
         
         Name
+        Type
         
-        AntM
+        AntM % 3x1
     end
     
     methods
-        function SV = SpaceVehicle(str_name)
-            if nargin < 1
+        function SV = SpaceVehicle(str_name, str_type)
+            if nargin < 2
                 error('SpaceVehicle:InvalidInitialization',...
-                    'Input argumets must be: Name')
+                    'Input argumets must be: Name, Type')
             end
             
             SV.Name = str_name;
+            SV.Type = str_type; % GLO, GPS, GEO, LEO, HElO and others
         end
         
-        function l = dist(obj1, obj2)
+        function touchX(SV1, k)
+            SV1.X =  [SV1.x(k); SV1.y(k); SV1.z(k)];
+        end
+        
+        function l = dist(SV1, SV2)
             % Calculate distance between two SV
-            l = sqrt((obj1.X - obj2.X)'*(obj1.X - obj2.X));
-            return;
+            l = norm(SV2.X - SV1.X);
         end
         
         function diff_r = dr(obj1, obj2)
@@ -42,32 +47,23 @@ classdef SpaceVehicle < handle
             return;
         end
         
-        function a = angl(obj1, obj2)
-            % Calculate angle between antenna axe and vision line
-            if obj1.dist(obj2) > 0
-                a = real(acos( obj1.vmDN' * obj1.dr(obj2)/obj1.dist(obj2) ));
-            else
-                disp('SVs are in one point of space');
+        function CalcAntM(SV, k)
+            % Calculate antenna direction for t.t(k) 
+            % SV.X, SV.r(k) must be actual
+            switch SV.Type
+                case 'LEO' % Low Earth Orbit
+                    SV.AntM = SV.X/SV.r(k);
+                case {'GEO', 'MEO'} % Geostationary Earth Orbit or Middle Earth Orbit
+                    SV.AntM = -SV.X/SV.r(k);
+                case 'HElO' % High Elliptical Orbit
+%                     SV.AntM = const;
+                case {'GPS', 'GLO'}
+                    SV.AntM = -SV.X/SV.r(k);
+                otherwise
+                    disp('Unknown Type of satellite');
             end
-            return;
         end
-        
+       
     end
     
 end
-
-% function out = resize_to_t(arr, Nmod)
-%     out = NaN;
-%     if isempty(arr)
-%         return
-%     end
-%     if isnan(arr) || isempty(arr)
-%         return;
-%     else
-%         if length(arr) ~= Nmod
-%             out = arr(1)*ones(1, Nmod);
-%         else
-%             out = arr;
-%         end
-%     end
-% end

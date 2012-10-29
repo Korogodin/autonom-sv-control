@@ -3,18 +3,14 @@ classdef SpaceVehicle_GLO < SpaceVehicle
         
     properties
         Alm
-        
-        % Kepler
-%         M
-%         E
-%         theta
-%         Omega
-        
+        RL_L1
+        RL_L2
+        RL_L3
     end
     
     methods
         function SV = SpaceVehicle_GLO(Name, Alm)
-            SV = SV@SpaceVehicle(Name);
+            SV = SV@SpaceVehicle(Name, 'GLO');
             SV.Alm = Alm;
         end
         
