@@ -3,18 +3,18 @@ classdef SpaceVehicle_GPS < SpaceVehicle
         
     properties
         Alm
+        RL_L1
         
         % Kepler
         M
         E
         theta
         Omega
-        
     end
     
     methods
         function SV = SpaceVehicle_GPS(Name, Alm)
-            SV = SV@SpaceVehicle(Name);
+            SV = SV@SpaceVehicle(Name, 'GPS');
             SV.Alm = Alm;
         end
         
