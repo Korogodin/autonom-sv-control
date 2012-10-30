@@ -7,6 +7,7 @@ clear
 clc
 
 globals;
+figures_handles;
 addpath([pwd '/data/']);
 
 load RadPatt.mat % Radiation patterns for transmitter's and receiver's antennas
@@ -15,8 +16,10 @@ mu_earth = 3.9860044e14; % [m^3/s^2] Gravity constant
 omega_e = 0.7292115e-4; % [rad/s] Earth's rotation rate
 R_e = 6371e3;  % [m] Mean Earth radiius
         
-Tmod = 5*89/60*4*60*60; % Model time
-dTmod = 30; % time step
+% Tmod = 48*60*60; % Model time
+% dTmod = 600; % time step
+Tmod = 30*60*60; % Model time
+dTmod = 100; % time step
 t = CTime(0:dTmod:Tmod, 24, 09, 2012);
 Nmod = length(t.t);
 
@@ -29,11 +32,10 @@ SensSearchGLO = -168;
 % Load GLONASS constellation from almanac
 GLO_Const = LoadGLOConst([pwd '/data/Topcon_120925.agl'], t);
 N_GLO = length(GLO_Const);
-hF = 0;
-hF = figure(hF + 1); hF_sat = hF;
-pos = get(hF, 'Position'); 
+figure(hF_sat);
+pos = get(hF_sat, 'Position'); 
 pos(3:4) = pos(3:4)*2;
-set(hF, 'Position', pos);
+set(hF_sat, 'Position', pos);
 hold on
 lambda =  3e8 / 1.602e9;
 TransPower = 18;
@@ -48,7 +50,7 @@ hold off
 
 % Load GPS constellation from almanac
 GPS_Const = LoadGPSConst([pwd '/data/Topcon_120925.agp'], t);
-N_GPS = length(GPS_Const);
+N_GPS =  length(GPS_Const);
 figure(hF_sat)
 hold on
 lambda =  3e8 / 1.575e9;
@@ -76,7 +78,7 @@ hold on; surface(x_e, y_e, z_e); hold off;
 Type = 'LEO';
 CNS = LoadCNS( Type, t );
 
-Hvect = R_e:25e3:R_e+8000e3;
+Hvect = R_e:2500e3:R_e+40000e3;
 
 if length(Hvect) > 1
     a = R_e + Hvect;
@@ -95,19 +97,15 @@ else
     Na = 1;
 end
 
-hF = hF + 1; hF_P_GPS = hF;
-hF = hF + 1; hF_P_GLO = hF;
-hF = hF + 1; hF_DOP = hF;
-hF = hF + 1; hF_Num = hF;
-hF = hF + 1; hF_MinIn4 = hF;
 for ja = 1:Na
     
-    fprintf('Calculate for h = %.0f km...\n', (Hvect(ja)-R_e)/1e3);
+    
     if Na > 1
+        fprintf('Calculate for h = %.0f km...\n', (Hvect(ja)-R_e)/1e3);
         CNS.a = Hvect(ja);
         CNS.calcKeplerOrbit(t);
     end
-%         CNS.a =R_earth_equa;
+%         CNS.a =R_earth_equa + 4000e3;
 %         CNS.calcKeplerOrbit(t);    
     
     figure(hF_sat)
@@ -127,7 +125,7 @@ for ja = 1:Na
         spr_leg = ['legend(''GLONASS ' GLO_Const(1).Name ''''];
         for j = 2:N_GLO
             spr = [spr sprintf(', t.t, GLO_Const(%.0f).RL_L1.Power', j)];
-            spr_leg = [spr_leg ', ''GLONASS ' GLO_Const(1).Name ''''];
+            spr_leg = [spr_leg ', ''GLONASS ' GLO_Const(j).Name ''''];
         end
         spr = [spr ');'];
         spr_leg = [spr_leg ');'];
@@ -150,7 +148,7 @@ for ja = 1:Na
         spr_leg = ['legend(''GPS ' GLO_Const(1).Name ''''];
         for j = 2:N_GPS
             spr = [spr sprintf(', t.t, GPS_Const(%.0f).RL_L1.Power', j)];
-            spr_leg = [spr_leg ', ''GPS ' GPS_Const(1).Name ''''];
+            spr_leg = [spr_leg ', ''GPS ' GPS_Const(j).Name ''''];
         end
         spr = [spr ');'];
         spr_leg = [spr_leg ');'];
@@ -185,6 +183,88 @@ for ja = 1:Na
         xlabel('t, sec')
         ylabel('Minimum P_{ant} in working four, dBWt');
         legend('GLONASS', 'GPS');
+        
+%         figure(hF_Angles)
+%         cla
+%         plot(t.t, GLO_Const(21).RL_L1.alpha, t.t, GLO_Const(21).RL_L1.beta, t.t, GPS_Const(17).RL_L1.alpha, t.t, GPS_Const(17).RL_L1.beta);
+%         xlabel('t, sec')
+%         ylabel('Angles to vision line');
+%         legend('GLONASS GL21 \alpha', 'GLONASS GL21 \beta', 'GPS GP17 \alpha', 'GPS GP17 \beta');
+%         
+%         figure(hF_Gain)
+%         cla
+%         plot(t.t, GLO_Const(21).RL_L1.G_rec, t.t, GLO_Const(21).RL_L1.G_tr, t.t, GPS_Const(17).RL_L1.G_rec, t.t, GPS_Const(17).RL_L1.G_tr);
+%         xlabel('t, sec')
+%         ylabel('Antenna''s gain');
+%         legend('GLONASS GL21 Gr', 'GLONASS GL1 Gt', 'GPS GP17 Gr', 'GPS GP17 Gt');        
+%         
+%         % Histogram of angles
+%         x_hist = 0:180;
+%         alphas = nan(1, N_GLO*Nmod);
+%         betas = nan(1, N_GLO*Nmod);
+%         for jg = 1:N_GLO
+%             alphas((jg-1)*Nmod+1:jg*Nmod) = GLO_Const(jg).RL_L1.alpha;
+%             betas((jg-1)*Nmod+1:jg*Nmod) = GLO_Const(jg).RL_L1.beta;
+%         end        
+%         figure(hF_Hist_alpha_GLO)
+%         cla
+%         hist(alphas, x_hist)
+%         xlabel('\alpha_{GLO}, deg');
+%         xlim([0 180]);
+%         figure(hF_Hist_beta_GLO)
+%         cla
+%         hist(betas, x_hist)
+%         xlabel('\beta_{GLO}, deg');
+%         xlim([0 180]);
+%         
+%         alphas = nan(1, N_GPS*Nmod);
+%         betas = nan(1, N_GPS*Nmod);
+%         for jg = 1:N_GPS
+%             alphas((jg-1)*Nmod+1:jg*Nmod) = GPS_Const(jg).RL_L1.alpha;
+%             betas((jg-1)*Nmod+1:jg*Nmod) = GPS_Const(jg).RL_L1.beta;
+%         end        
+%         figure(hF_Hist_alpha_GPS)
+%         cla
+%         hist(alphas, x_hist)
+%         xlabel('\alpha_{GPS}, deg');
+%         xlim([0 180]);
+%         figure(hF_Hist_beta_GPS)
+%         cla
+%         hist(betas, x_hist)
+%         xlabel('\beta_{GPS}, deg');          
+%         xlim([0 180]);
+%         
+%         beta_arr = 0:1:180;
+%         EnergyFromBeta_GLO = zeros(1, 181);
+%         EnergyFromBeta_GPS = zeros(1, 181);
+%         for kb = 1:Nmod
+%             for jg = 1:N_GLO
+%                 if ~isnan(GLO_Const(jg).RL_L1.beta(kb))
+%                     EnergyFromBeta_GLO(round(GLO_Const(jg).RL_L1.beta(kb))+1) = ...
+%                        EnergyFromBeta_GLO(round(GLO_Const(jg).RL_L1.beta(kb))+1) + ...
+%                        10^(GLO_Const(jg).RL_L1.Power_noNaN(kb)/10);
+%                 end
+%             end
+%             for jg = 1:N_GPS
+%                 if ~isnan(GPS_Const(jg).RL_L1.beta(kb))
+%                     EnergyFromBeta_GPS(round(GPS_Const(jg).RL_L1.beta(kb))+1) = ...
+%                        EnergyFromBeta_GPS(round(GPS_Const(jg).RL_L1.beta(kb))+1) + ...
+%                        10^(GPS_Const(jg).RL_L1.Power_noNaN(kb)/10);
+%                 end
+%             end
+%         end
+%         EnergyFromBeta_GLO = 10*log10(EnergyFromBeta_GLO);
+%         EnergyFromBeta_GPS = 10*log10(EnergyFromBeta_GPS);
+%         figure(hF_EnergyFromBeta_GLO)
+%         bar(beta_arr, EnergyFromBeta_GLO  + 220)
+%         ylabel('Energy histogram for GLONASS, dB')
+%         xlabel('beta, deg');
+%         xlim([0 180]);
+%         figure(hF_EnergyFromBeta_GPS)
+%         bar(beta_arr, EnergyFromBeta_GPS + 220)
+%         ylabel('Energy histogram for GPS, dB')
+%         xlabel('beta, deg');
+%         xlim([0 180]);
         
         Availability_GLO(ja) = sum(CNS.Num_Sync_GLO >= 4) / Nmod;
         Availability_GPS(ja) = sum(CNS.Num_Sync_GPS >= 4) / Nmod;

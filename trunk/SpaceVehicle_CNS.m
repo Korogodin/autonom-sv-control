@@ -133,9 +133,12 @@ classdef SpaceVehicle_CNS < SpaceVehicle
                     end
                 end
                 if jA >= 4
-                    A = A(1:jA, 4);
+                    A = A(1:jA, 1:4);
                     SV.DOP_GLO(k) = sqrt(trace( (A'*A)^-1));
                     SV.DOP_GLO_noNaN(k) = SV.DOP_GLO(k);
+                    if SV.DOP_GLO(k) > 100
+                        SV.DOP_GLO(k) = NaN;
+                    end                    
                 else
                     SV.DOP_GLO(k) = NaN;
                     SV.DOP_GLO_noNaN(k) = 80;
@@ -152,9 +155,12 @@ classdef SpaceVehicle_CNS < SpaceVehicle
                     end
                 end
                 if jA >= 4
-                    A = A(1:jA, 4);
+                    A = A(1:jA, 1:4);
                     SV.DOP_GPS(k) = sqrt(trace( (A'*A)^-1));
                     SV.DOP_GPS_noNaN(k) = SV.DOP_GPS(k);
+                    if SV.DOP_GPS(k) > 100
+                        SV.DOP_GPS(k) = NaN;
+                    end
                 else
                     SV.DOP_GPS(k) = NaN;
                     SV.DOP_GPS_noNaN(k) = 80;
@@ -168,13 +174,13 @@ classdef SpaceVehicle_CNS < SpaceVehicle
                 for jg = 1:N_GPS
                     if (GPS_Const(jg).RL_L1.Power_noNaN(k) > SensLoopGPS)&&GPS_Const(jg).RL_L1.Sync(k)
                         jA1 = jA1 + 1;
-                        A1(jA, 1:3) = GPS_Const(jg).RL_L1.dr' / GPS_Const(jg).RL_L1.R;
+                        A1(jA1, 1:3) = GPS_Const(jg).RL_L1.dr' / GPS_Const(jg).RL_L1.R;
                     end
                 end
                 A2 = -ones(N_GLO, 4);
                 jA2 = 0;
                 for jg = 1:N_GLO
-                    if (GLO_Const(jg).RL_L1.Power_noNaN(k) > SensLoopGLO)&&GPS_Const(jg).RL_L1.Sync(k)
+                    if (GLO_Const(jg).RL_L1.Power_noNaN(k) > SensLoopGLO)&&GLO_Const(jg).RL_L1.Sync(k)
                         jA2 = jA2 + 1;
                         A(jA2, 1:3) = GLO_Const(jg).RL_L1.dr' / GLO_Const(jg).RL_L1.R;
                     end
@@ -182,18 +188,21 @@ classdef SpaceVehicle_CNS < SpaceVehicle
                 
                 jA = 0;
                 if jA1 >= 2
-                    A(jA+1:jA+jA1) = A1(1:jA1, 4);
+                    A(jA+1:jA+jA1, 1:4) = A1(1:jA1, 1:4);
                     jA = jA + jA1;
                 end
                 if jA2 >= 2
-                    A(jA+1:jA+jA2) = A2(1:jA2, 4);
+                    A(jA+1:jA+jA2, 1:4) = A2(1:jA2, 1:4);
                     jA = jA + jA2;
                 end
                     
                  if (jA >= 5)||(jA1 >= 4)||(jA2 >= 4)
-                    A = A(1:jA, 4);
+                    A = A(1:jA, 1:4);
                     SV.DOP_Comm(k) = sqrt(trace( (A'*A)^-1));
                     SV.DOP_Comm_noNaN(k) = SV.DOP_Comm(k);
+                    if SV.DOP_Comm(k) > 100
+                        SV.DOP_Comm(k) = NaN;
+                    end
                 else
                     SV.DOP_Comm(k) = NaN;
                     SV.DOP_Comm_noNaN(k) = 80;

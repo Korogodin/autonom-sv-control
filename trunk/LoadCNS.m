@@ -1,6 +1,7 @@
 function SV_CNS = LoadCNS( Type, t )
 %LOADCNS Construct SV-consumer of Type
 
+M0 = 0;
 switch Type
     case 'LEO'
         % Космос-2480 — российский разведывательный спутник типа Кобальт-М.
@@ -35,10 +36,11 @@ switch Type
         Omega = deg2rad(70);
         omega = deg2rad(280);
         i = deg2rad(62.8);
+        M0 = -pi;
     otherwise
         disp('Unknown Type of CNS');
 end
-    M0 = 0;
+    
     
     SV_CNS =  SpaceVehicle_CNS(Type, Type, a, e, Omega, omega, i, M0, t);
     SV_CNS.calcKeplerOrbit(t);
