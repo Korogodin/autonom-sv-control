@@ -52,11 +52,11 @@ classdef SpaceVehicle < handle
             % SV.X, SV.r(k) must be actual
             switch SV.Type
                 case 'LEO' % Low Earth Orbit
-                    SV.AntM = SV.X/SV.r(k);
+                    SV.AntM = -SV.X/SV.r(k); % TEEEEEMPPP
                 case {'GEO', 'MEO'} % Geostationary Earth Orbit or Middle Earth Orbit
                     SV.AntM = -SV.X/SV.r(k);
                 case 'HElO' % High Elliptical Orbit
-%                     SV.AntM = const;
+                    SV.AntM = -[SV.x(1); SV.y(1); SV.z(1)]/SV.r(1);
                 case {'GPS', 'GLO'}
                     SV.AntM = -SV.X/SV.r(k);
                 otherwise

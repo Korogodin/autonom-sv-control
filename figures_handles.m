@@ -1,0 +1,15 @@
+hF = 0;
+hF = hF + 1; hF_sat = hF;
+hF = hF + 1; hF_P_GLO = hF;
+hF = hF + 1; hF_P_GPS = hF;
+hF = hF + 1; hF_DOP = hF;
+hF = hF + 1; hF_Num = hF;
+hF = hF + 1; hF_MinIn4 = hF;
+hF = hF + 1; hF_Angles = hF;
+hF = hF + 1; hF_Gain = hF;
+hF = hF + 1; hF_Hist_alpha_GLO = hF;
+hF = hF + 1; hF_Hist_beta_GLO = hF;
+hF = hF + 1; hF_Hist_alpha_GPS = hF;
+hF = hF + 1; hF_Hist_beta_GPS = hF;
+hF = hF + 1; hF_EnergyFromBeta_GLO = hF;
+hF = hF + 1; hF_EnergyFromBeta_GPS = hF;
