@@ -78,7 +78,7 @@ hold on; surface(x_e, y_e, z_e); hold off;
 Type = 'LEO';
 CNS = LoadCNS( Type, t );
 
-Hvect = R_e:2500e3:R_e+40000e3;
+Hvect = R_e:25e3:R_e+40000e3;
 
 if length(Hvect) > 1
     a = R_e + Hvect;
